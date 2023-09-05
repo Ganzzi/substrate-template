@@ -1,5 +1,5 @@
 use crate::{mock::*, Error, Event};
-use frame_support::{assert_noop, assert_ok};
+use frame_support::{assert_noop, assert_ok, traits::Currency};
 
 #[test]
 fn create_kitty_should_work() {
@@ -75,6 +75,12 @@ fn buy_kitty_should_work() {
 
 		assert_ok!(KittiesModule::buy_kitty(RuntimeOrigin::signed(5), dna1.clone(), 100));
 
+		let balance_1 = Balances::free_balance(&1);
+		let balance_5 = Balances::free_balance(&5);
+
+		assert_eq!(balance_1, 1100, "wrong balance");
+		assert_eq!(balance_5, 900, "wrong balance");
+		
 		System::assert_last_event(Event::Transferred { from: 1,to: 5, kitty: dna1.clone() }.into());
 
 		let new_kitty = KittiesModule::get_kitty(dna1.clone()).unwrap();

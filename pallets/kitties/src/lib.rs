@@ -5,6 +5,8 @@ pub use pallet::*;
 use frame_support::dispatch::*;
 use frame_support::{inherent::Vec, pallet_prelude::*, traits::ExistenceRequirement};
 use frame_system::pallet_prelude::*;
+// use frame_system::GenesisBuild;
+
 #[cfg(test)]
 mod mock;
 #[cfg(test)]
@@ -58,7 +60,6 @@ pub enum Gender {
 
 #[frame_support::pallet]
 pub mod pallet {
-
 	use super::*;
 
 	#[pallet::pallet]
@@ -112,6 +113,23 @@ pub mod pallet {
 		BidPriceTooLow,
 		NotForSale,
 	}
+
+	// #[pallet::genesis_config]
+	// pub struct GenesisConfig<T: Config>{
+	// 	pub kitties: Vec<(T::AccountId, Vec<u8>)>
+	// }
+
+	// #[cfg(feature = "std")]
+	// impl <T: Config> Default for GenesisConfig {
+	// 	fn default() -> Self {
+	// 		Self {kitties: Default::default()}
+	// 	}
+	// }
+
+	// #[pallet::genesis_build]
+	// impl <T: Config>BuildGenesisConfig for GenesisBuild<T> {
+		
+	// }
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {

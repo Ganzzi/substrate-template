@@ -1,11 +1,10 @@
 use crate as pallet_kitties;
-use frame_support::traits::{ConstU16, ConstU64, ConstU128};
+use frame_support::traits::{ConstU128, ConstU16, ConstU64};
 use sp_core::H256;
 use sp_runtime::{
 	testing::Header,
 	traits::{BlakeTwo256, IdentityLookup},
 };
-
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
@@ -62,10 +61,10 @@ impl pallet_balances::Config for Test {
 	type ExistentialDeposit = ConstU128<10>;
 	type AccountStore = System;
 	type WeightInfo = ();
-	type HoldIdentifier =();
-	type FreezeIdentifier =();
-	type MaxHolds =();
-	type MaxFreezes =();
+	type HoldIdentifier = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 impl pallet_kitties::Config for Test {
@@ -75,5 +74,9 @@ impl pallet_kitties::Config for Test {
 
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	frame_system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+	let mut t = frame_system::GenesisConfig::default().build_storage::<Test>().unwrap();
+	pallet_balances::GenesisConfig::<Test> { balances: vec![(1, 1000), (5, 1000)] }
+		.assimilate_storage(&mut t)
+		.unwrap();
+	t.into()
 }
