@@ -134,7 +134,7 @@ pub mod pallet {
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
 		#[pallet::call_index(0)]
-		#[pallet::weight(5000)]
+		#[pallet::weight(227_901_000)]
 		pub fn create_kitty(origin: OriginFor<T>, dna: Vec<u8>) -> DispatchResult {
 			// Make sure the caller is from a signed origin
 			let owner = ensure_signed(origin)?;

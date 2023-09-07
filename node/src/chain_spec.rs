@@ -168,5 +168,7 @@ fn testnet_genesis(
 			  ),
 			],
 		  },
+		assets: Default::default(),
+
 	}
 }
