@@ -11,18 +11,18 @@ mod mock;
 
 #[cfg(test)]
 mod tests;
+pub mod weights;
+pub use weights::*;
 
 // #[cfg(feature = "runtime-benchmarks")]
 // mod benchmarking;
 
-use scale_info::prelude::vec::Vec;
 use frame_support::pallet_prelude::*;
 use frame_system::pallet_prelude::*;
+use scale_info::prelude::vec::Vec;
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-
-	
 
 	#[derive(
 		Encode,
@@ -46,6 +46,7 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// Because this pallet emits events, it depends on the runtime's definition of an event.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		type WeightInfo: WeightInfo;
 	}
 
 	// The pallet's runtime storage items.
@@ -91,7 +92,18 @@ pub mod pallet {
 	pub enum Event<T: Config> {
 		/// Event documentation should end with an array that provides descriptive names for event
 		/// parameters. [something, who]
-		SomethingStored { something: u32, who: T::AccountId },
+		SomethingStored {
+			something: u32,
+			who: T::AccountId,
+		},
+		Increased {
+			value: u32,
+			who: T::AccountId,
+		},
+		Decreased {
+			value: u32,
+			who: T::AccountId,
+		},
 	}
 
 	// Errors inform users that something went wrong.
@@ -102,7 +114,7 @@ pub mod pallet {
 		/// Errors should have helpful documentation associated with them.
 		StorageOverflow,
 		DivideZero,
-
+		CanNotSub,
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -151,40 +163,39 @@ pub mod pallet {
 
 		#[pallet::call_index(2)]
 		#[pallet::weight(10_000_000)]
-		pub fn insert_person_slice(origin: OriginFor<T>, name: Vec<u8>, age: u16, grade: u8) -> DispatchResult {
+		pub fn insert_person_slice(
+			origin: OriginFor<T>,
+			name: Vec<u8>,
+			age: u16,
+			grade: u8,
+		) -> DispatchResult {
 			let _who = ensure_signed(origin)?;
-		 
-			let p = StudentSlice{
-				name : Self::convert_str_to_slice(&name), 
-				age: age,
-				grade: grade
-			};
- 
+
+			let p = StudentSlice { name: Self::convert_str_to_slice(&name), age, grade };
+
 			// <StudentSliceMapStorage<T>>::insert(_who, p);
 			StudentSliceMapStorage::<T>::insert(_who.clone(), p);
 			// let pslice: StudentSlice = StudentSliceMapStorage::<T>::get(_who.clone());
 
- 
-
-			Ok(())	
+			Ok(())
 		}
 
 		#[pallet::call_index(3)]
 		#[pallet::weight(10_000_000)]
 		pub fn get_something(origin: OriginFor<T>) -> DispatchResult {
 			let _who = ensure_signed(origin)?;
-		   
-		   // get value by getter
+
+			// get value by getter
 			let s1 = Self::something();
 			let s2 = Self::something_value();
-			
+
 			// get value by alias type
 			let a1 = Something::<T>::get();
 			let a2 = <Something<T>>::get();
 
-			// put value 
+			// put value
 			SomethingValue::<T>::put(1);
-			Something::<T>::put(1); 
+			Something::<T>::put(1);
 
 			// insert map
 			ValueMap::<T>::insert(1, 10);
@@ -194,88 +205,108 @@ pub mod pallet {
 			let map1 = ValueMap::<T>::get(0);
 			let map1 = <ValueMap<T>>::get(1);
 			let map1 = Self::map_value(2);
- 
-			
 
-			Ok(())	      
+			Ok(())
 		}
 
 		#[pallet::call_index(4)]
 		#[pallet::weight(10_000_000)]
 		pub fn div_number(origin: OriginFor<T>, dividend_number: u32) -> DispatchResult {
 			let _who = ensure_signed(origin)?;
-		   
-		   // cach 1
+
+			// cach 1
 			ensure!(dividend_number == 0, <Error<T>>::DivideZero);
 
 			// cach 2
 			if dividend_number == 0 {
 				return Err(<Error<T>>::DivideZero.into());
 			}
-			
+
 			let something = Something::<T>::get();
 			match something {
 				None => return Err(Error::<T>::NoneValue.into()),
 				Some(value) => {
 					// cach 3
-					let new_value = value.checked_div(dividend_number).ok_or(Error::<T>::StorageOverflow)?;
+					let new_value =
+						value.checked_div(dividend_number).ok_or(Error::<T>::StorageOverflow)?;
 					Something::<T>::put(new_value);
-					
-				}
+				},
 			}
-
-
-			Ok(())	      
+			Ok(())
 		}
 
-		
+		#[pallet::call_index(5)]
+		#[pallet::weight(T::WeightInfo::do_something())]
+		pub fn increase(origin: OriginFor<T>) -> DispatchResult {
+			// Check that the extrinsic was signed and get the signer.
+			// This function will return an error if the extrinsic is not signed.
+			// https://docs.substrate.io/main-docs/build/origins/
+			let who = ensure_signed(origin)?;
+			let current_value = Something::<T>::get().unwrap_or_default();
+			let next_value = current_value + 1;
+			// Update storage.
+			<Something<T>>::put(next_value);
+
+			// Emit an event.
+			Self::deposit_event(Event::Increased { value: next_value, who });
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
+
+		#[pallet::call_index(6)]
+		#[pallet::weight(T::WeightInfo::do_something())]
+		pub fn decrease(origin: OriginFor<T>) -> DispatchResult {
+			// Check that the extrinsic was signed and get the signer.
+			// This function will return an error if the extrinsic is not signed.
+			// https://docs.substrate.io/main-docs/build/origins/
+			let who = ensure_signed(origin)?;
+			let current_value = Something::<T>::get().unwrap_or_default();
+			let next_value = current_value.checked_sub(1).ok_or(Error::<T>::CanNotSub)?;
+			// Update storage.
+			<Something<T>>::put(next_value);
+
+			// Emit an event.
+			Self::deposit_event(Event::Decreased { value: next_value, who });
+			// Return a successful DispatchResultWithPostInfo
+			Ok(())
+		}
 	}
 }
 
-
 impl<T: Config> Pallet<T> {
-		
 	fn convert_str_to_slice(_str: &Vec<u8>) -> [u8; 32] {
 		let bytes = _str;
-		let mut array:  [u8; 32] = [0; 32];
+		let mut array: [u8; 32] = [0; 32];
 		frame_support::log::info!("called by {:?}", bytes);
-		 
+
 		let mut length = 32;
 		if bytes.len() < 32 {
 			length = bytes.len();
 		}
-		
+
 		for i in 0..length {
 			array[i] = bytes[i];
 		}
-
 
 		return array;
 	}
 
 	pub fn update_storage(new_value: u32) -> DispatchResult {
-
 		<Something<T>>::put(new_value);
-
 
 		Ok(())
 	}
 }
-
 
 pub trait DoSomething {
 	fn increase_value(amount: u32) -> DispatchResult;
 }
 
 impl<T: Config> DoSomething for Pallet<T> {
-	fn increase_value(amount: u32) -> DispatchResult{
+	fn increase_value(amount: u32) -> DispatchResult {
 		let current_value = Self::something().unwrap_or_default();
 		<Something<T>>::put(current_value + amount);
 
 		Ok(())
-	
-	
 	}
-
-
 }

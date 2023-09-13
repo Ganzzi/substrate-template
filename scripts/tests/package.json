@@ -1,0 +1,17 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "none",
+  "main": "index.js",
+  "scripts": {
+    "test": "yarn test"
+  },
+  "keywords": [
+    "test"
+  ],
+  "author": "ganzzi",
+  "license": "ISC",
+  "dependencies": {
+    "@polkadot/api": "^10.9.1"
+  }
+}

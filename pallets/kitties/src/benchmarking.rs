@@ -15,7 +15,7 @@ mod benchmarks {
 	fn create_kitty() {
 		let dna1 = vec![3];
 		let caller: T::AccountId = whitelisted_caller();
-		#[extrinsic_call]
+		#[extrinsic_call] // macro
 		create_kitty(RawOrigin::Signed(caller), dna1);
 	}
 
@@ -24,7 +24,7 @@ mod benchmarks {
 	let dna1 = vec![3];
 
 		let caller: T::AccountId = whitelisted_caller();
-		#[extrinsic_call]
+		#[extrinsic_call] // macro
 		set_price(RawOrigin::Signed(caller), dna1, Some(100));
 	}
 

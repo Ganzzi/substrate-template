@@ -10,6 +10,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 use sp_core::OpaquePeerId; // A struct wraps Vec<u8> to represent the node `PeerId`.
 use node_template_runtime::NodeAuthorizationConfig; // The genesis config that serves the pallet.
 use hex_literal::hex;
+use sp_core::crypto::UncheckedInto;
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -110,6 +111,61 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 					get_account_id_from_seed::<sr25519::Public>("Dave//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Eve//stash"),
 					get_account_id_from_seed::<sr25519::Public>("Ferdie//stash"),
+				],
+				true,
+			)
+		},
+		// Bootnodes
+		vec![],
+		// Telemetry
+		None,
+		// Protocol ID
+		None,
+		// Properties
+		None,
+		None,
+		// Extensions
+		None,
+	))
+}
+
+// Configure public network
+pub fn staging_testnet_config() -> Result<ChainSpec, String> {
+	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
+
+	Ok(ChainSpec::from_genesis(
+		// Name
+		"Vbi Testnet",
+		// ID
+		"vbi_testnet",
+		ChainType::Live,
+		move || {
+			testnet_genesis(
+				wasm_binary,
+				// AURA : block production : chọn authority để tạo block 
+				// GRANPA: finalize block 
+				// làm sao phần biệt 1 account nào đó có chức năng đặt biệt : authority/validator
+				// hệ thống dựa vào key : AuraKey và Granpa Key 
+				//  AuraKey : sr25519
+				// Grapa Key : ed25519
+				// Initial PoA authorities
+				// 1 authority sẽ gồm 1 cặp (AuraId, GranpaId)
+
+				vec![(
+					hex!("44846c8f815c2c813465bc75401f6ed78f52732a8dbbb5a1d76fd0daed5e8563").unchecked_into(),
+					hex!("8b14da762452fbc496e298700a6089881957f67ccaa67de6e8ff90a35c6c82c3").unchecked_into()
+				),
+				(
+					hex!("6a2d727e23ad3a31ad151e7e8d1fc612d352762e83710a1f499dfe2c5b1f4d0a").unchecked_into(),
+					hex!("2710748c330d19caa68d72c837d83c1b48a71f5817d7ad25e76af2268e6cee24").unchecked_into()
+				)
+				],
+				// Sudo account
+				hex!("44846c8f815c2c813465bc75401f6ed78f52732a8dbbb5a1d76fd0daed5e8563").into(),
+				// Pre-funded accounts
+				vec![
+				hex!("44846c8f815c2c813465bc75401f6ed78f52732a8dbbb5a1d76fd0daed5e8563").into(),
+				hex!("6a2d727e23ad3a31ad151e7e8d1fc612d352762e83710a1f499dfe2c5b1f4d0a").into()
 				],
 				true,
 			)
