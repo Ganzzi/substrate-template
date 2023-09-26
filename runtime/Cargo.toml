@@ -44,6 +44,9 @@ pallet-contracts = { git = "https://github.com/paritytech/substrate", package = 
 pallet-contracts-primitives = { git = "https://github.com/paritytech/substrate", package = "pallet-contracts-primitives", default-features = false, branch = "polkadot-v0.9.42" }
 pallet-assets-chain-extension = { git = "https://github.com/727-Ventures/pallet-assets-chain-extension", default-features = false, features = ["substrate"], branch = "polkadot-v0.9.42"  }
 
+hex-literal = "0.3.4"
+pallet-nfts = { version = "4.0.0-dev", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.42" }
+
 pallet-authorship = { git = "https://github.com/paritytech/substrate", package = "pallet-authorship", default-features = false, branch = "polkadot-v0.9.42" }
 pallet-assets = { git = "https://github.com/paritytech/substrate", package = "pallet-assets", default-features = false, branch = "polkadot-v0.9.42" }
 pallet-insecure-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", package = "pallet-insecure-randomness-collective-flip", default-features = false, branch = "polkadot-v0.9.42" }

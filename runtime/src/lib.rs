@@ -6,6 +6,65 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+use codec::Encode;
+use frame_support::{log::{
+    error,
+    trace,
+}, traits::EnsureOrigin, Parameter};
+use pallet_contracts::chain_extension::{
+    ChainExtension,
+    Environment,
+    Ext,
+    InitState,
+    RetVal,
+    SysConfig,
+};
+use sp_core::crypto::UncheckedFrom;
+use sp_runtime::{DispatchError, traits::Lazy};
+
+
+#[derive(Default)]
+pub struct FetchRandomExtension;
+
+impl ChainExtension<Runtime> for FetchRandomExtension {
+    fn call<E: Ext>(
+        &mut self,
+        env: Environment<E, InitState>,
+    ) -> Result<RetVal, DispatchError>
+    where
+        <E::T as SysConfig>::AccountId:
+            UncheckedFrom<<E::T as SysConfig>::Hash> + AsRef<[u8]>,
+    {
+        let func_id = env.func_id();
+        match func_id {
+            1101 => {
+                let mut env = env.buf_in_buf_out();
+                let arg: [u8; 32] = env.read_as()?;
+                let random_seed = crate::RandomnessCollectiveFlip::random(&arg).0;
+                let random_slice = random_seed.encode();
+                trace!(
+                    target: "runtime",
+                    "[ChainExtension]|call|func_id:{:}",
+                    func_id
+                );
+                env.write(&random_slice, false, None).map_err(|_| {
+                    DispatchError::Other("ChainExtension failed to call random")
+                })?;
+            }
+
+            _ => {
+                error!("Called an unregistered `func_id`: {:}", func_id);
+                return Err(DispatchError::Other("Unimplemented func_id"))
+            }
+        }
+        Ok(RetVal::Converging(0))
+    }
+
+    fn enabled() -> bool {
+        true
+    }
+}
+
 use pallet_grandpa::AuthorityId as GrandpaId;
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -413,7 +472,8 @@ impl pallet_contracts::Config for Runtime {
 
 
 	type Randomness = RandomnessCollectiveFlip;
-	type ChainExtension = pallet_assets_chain_extension::substrate::AssetsExtension;
+	// type ChainExtension = pallet_assets_chain_extension::substrate::AssetsExtension;
+	type ChainExtension =  FetchRandomExtension;
 	
 	type Schedule = Schedule;
 	type CallFilter = AllowBalancesCall;
@@ -486,6 +546,93 @@ impl pallet_assets::Config for Runtime {
 	type CallbackHandle = ();
 }
 
+parameter_types! {
+	pub const CollectionDeposit: Balance = 100 * DOLLARS;
+	pub const ItemDeposit: Balance = 1 * DOLLARS;
+	pub const KeyLimit: u32 = 32;
+	pub const ValueLimit: u32 = 256;
+	pub const AttributeDepositBase: Balance = 10 * DOLLARS;
+	// pub const StringLimit: u32 = 128;
+	pub const ApprovalsLimit: u32 = 1;
+	pub const MaxAttributesPerCall: u32 = 10;
+	pub const MaxTips: u32 = 5;
+	pub const ItemAttributesApprovalsLimit: u32 = 10;
+	pub const MaxDeadlineDuration: BlockNumber = 10;
+}
+
+use frame_support::traits::tokens::Locker;
+
+#[derive(Default)]
+pub struct NftLocker;
+
+impl Locker<u32, u32> for NftLocker {
+	fn is_locked(collection: u32, item: u32) -> bool {
+		false
+	}
+}
+
+pub struct OffchainPublicKey;
+use hex_literal::hex;
+
+impl IdentifyAccount for OffchainPublicKey {
+	type AccountId = AccountId;
+
+	fn into_account(self) -> Self::AccountId {
+		hex!("44846c8f815c2c813465bc75401f6ed78f52732a8dbbb5a1d76fd0daed5e8563").into()
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, scale_info::TypeInfo, codec::Encode, codec::Decode)]
+// #[scale_info(TypeInfo)]
+// #[codec(Codec, EncodeLike)]
+pub struct OffchainSignatureKey;
+
+// impl Parameter for OffchainSignatureKey {}
+
+impl Verify for OffchainSignatureKey{
+	/// Type of the signer.
+	type Signer = OffchainPublicKey;
+	/// Verify a signature.
+	///
+	/// Return `true` if signature is valid for the value.
+	fn verify<L: Lazy<[u8]>>(
+		&self,
+		msg: L,
+		signer: &<Self::Signer as IdentifyAccount>::AccountId,
+	) -> bool {
+		true
+	}
+}
+
+impl pallet_nfts::Config for Runtime {
+	type ApprovalsLimit = ApprovalsLimit;
+	type AttributeDepositBase = AttributeDepositBase;
+	type CollectionDeposit = CollectionDeposit;
+	type CollectionId = u32;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type Currency = Balances;
+	type DepositPerByte = DepositPerByte;
+	type Features = ();
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type ItemAttributesApprovalsLimit = ItemAttributesApprovalsLimit;
+	type ItemDeposit = ItemDeposit;
+	type ItemId = u32;
+	type KeyLimit = KeyLimit;
+	type Locker = NftLocker;
+	type MaxAttributesPerCall = MaxAttributesPerCall;
+	type MaxDeadlineDuration = MaxDeadlineDuration;
+
+	type MaxTips = MaxTips;
+	type MetadataDepositBase = MetadataDepositBase;
+
+	type OffchainPublic = OffchainPublicKey;
+	type OffchainSignature = OffchainSignatureKey;
+	type RuntimeEvent = RuntimeEvent;
+	type StringLimit = StringLimit; 
+	type ValueLimit = ValueLimit;
+
+	type WeightInfo = pallet_nfts::weights::SubstrateWeight<Runtime>;
+}
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -517,6 +664,8 @@ construct_runtime!(
 		RandomnessCollectiveFlip: pallet_insecure_randomness_collective_flip,
 		Utility: pallet_utility,
 		Assets: pallet_assets,
+
+		Nfts: pallet_nfts
 	}
 );
 
